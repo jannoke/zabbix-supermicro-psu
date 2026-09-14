@@ -1,0 +1,20 @@
+#!/usr/bin/make -f
+
+%:
+	dh $@
+
+override_dh_auto_install:
+	install -d debian/zabbix-supermicro-psu/usr/lib/zabbix-supermicro-psu
+	install -m 0755 bin/psu_common.py bin/psu_discover.py bin/psu_read_energy.py bin/psu_read_status.py \
+	    debian/zabbix-supermicro-psu/usr/lib/zabbix-supermicro-psu/
+	install -d debian/zabbix-supermicro-psu/etc/zabbix/zabbix_agentd.d
+	install -m 0644 etc/zabbix_agentd.d/supermicro_psu.conf \
+	    debian/zabbix-supermicro-psu/etc/zabbix/zabbix_agentd.d/supermicro_psu.conf
+	install -d debian/zabbix-supermicro-psu/etc/udev/rules.d
+	install -m 0644 packaging/99-zabbix-supermicro-psu.rules \
+	    debian/zabbix-supermicro-psu/etc/udev/rules.d/99-zabbix-supermicro-psu.rules
+	install -d -m 0750 debian/zabbix-supermicro-psu/var/lib/zabbix-supermicro-psu/state
+
+override_dh_auto_test:
+	# No compiled artifacts to test at package-build time; run `pytest
+	# tests/` from a source checkout instead (see CI).

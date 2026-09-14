@@ -1,0 +1,16 @@
+Source: zabbix-supermicro-psu
+Section: admin
+Priority: optional
+Maintainer: zabbix-supermicro-psu maintainers <noreply@example.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.6.0
+Homepage: https://github.com/jannoke/zabbix-supermicro-psu
+
+Package: zabbix-supermicro-psu
+Architecture: all
+Depends: ${misc:Depends}, python3, ipmitool, zabbix-agent
+Description: Zabbix PSU energy monitoring for Supermicro servers via ipmitool i2c
+ Discovers populated Supermicro PSU bays over PMBus/I2C via the local BMC
+ and reports each PSU's cumulative energy usage as a Zabbix counter item,
+ using a stateful helper to linearize the PMBus READ_EIN accumulator's
+ rollover. Ships a Zabbix LLD template alongside the UserParameter scripts.

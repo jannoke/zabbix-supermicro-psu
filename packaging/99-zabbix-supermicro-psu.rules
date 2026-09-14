@@ -1,0 +1,5 @@
+# Grant the zbxipmi group access to the BMC device so an unprivileged
+# zabbix-agent(d) can run 'ipmitool i2c' without root or sudo.
+# Installed by zabbix-supermicro-psu's packaging.
+KERNEL=="ipmi0", GROUP="zbxipmi", MODE="0660"
+SUBSYSTEM=="ipmi", GROUP="zbxipmi", MODE="0660"

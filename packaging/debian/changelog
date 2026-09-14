@@ -1,0 +1,5 @@
+zabbix-supermicro-psu (0.1.0) unstable; urgency=low
+
+  * Initial packaging.
+
+ -- zabbix-supermicro-psu maintainers <noreply@example.com>  Mon, 14 Sep 2026 00:00:00 +0000

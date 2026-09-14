@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+if [ "$1" = "configure" ]; then
+    getent group zbxipmi >/dev/null || groupadd --system zbxipmi
+    if id zabbix >/dev/null 2>&1; then
+        usermod -a -G zbxipmi zabbix
+    fi
+    if command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules || true
+        udevadm trigger --subsystem-match=ipmi || true
+    fi
+    chown zabbix:zabbix /var/lib/zabbix-supermicro-psu/state 2>/dev/null || true
+    echo "Restart zabbix-agentd for the new device permissions to take effect." >&2
+fi
+
+#DEBHELPER#
+
+exit 0

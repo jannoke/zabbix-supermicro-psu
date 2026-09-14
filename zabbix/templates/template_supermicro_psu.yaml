@@ -1,0 +1,120 @@
+zabbix_export:
+  version: '6.0'
+  templates:
+    - uuid: 3f2a1d4e5b6c47a1899d0e6f7a8b9c01
+      template: 'Supermicro PSU Energy Monitoring'
+      name: 'Supermicro PSU Energy Monitoring'
+      description: |
+        Discovers populated Supermicro PSU bays via PMBus/I2C over the local
+        BMC (ipmitool i2c) and tracks each PSU's cumulative energy usage as
+        a monotonic counter (PMBus READ_EIN), plus a presence/health check.
+
+        Requires the zabbix-supermicro-psu scripts and UserParameter config
+        installed on the monitored host (see packaging/install.sh) - the
+        Zabbix agent runs 'ipmitool i2c' locally, so this only works with
+        Zabbix agent (not agent-less / SNMP) on the PSU's own host.
+
+        Set {$PSU.I2C.BUSES} if this chassis doesn't expose the PSU
+        backplane on I2C bus 3.
+      groups:
+        - name: 'Templates/Hardware'
+      macros:
+        - macro: '{$PSU.I2C.BUSES}'
+          value: '3'
+          description: 'Comma-separated I2C bus number(s) to probe for PSU bays. Varies by chassis/motherboard generation.'
+        - macro: '{$PSU.ENERGY.POLL.INTERVAL}'
+          value: 1m
+          description: 'Poll interval for the cumulative energy counter item.'
+        - macro: '{$PSU.STATUS.POLL.INTERVAL}'
+          value: 1m
+          description: 'Poll interval for the presence/status item.'
+        - macro: '{$PSU.NODATA.TRIGGER.TIME}'
+          value: 10m
+          description: 'How long a PSU status item may report no data before the read-failure trigger fires.'
+      discovery_rules:
+        - uuid: 7c1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a
+          name: 'Supermicro PSU bay discovery'
+          key: 'supermicro.psu.discovery[{$PSU.I2C.BUSES}]'
+          delay: 1h
+          lifetime_type: AFTER
+          lifetime: 1d
+          description: |
+            Probes every (bus, bay) address combination for a PMBus response.
+            Absent/empty bays are not an error - they are simply omitted from
+            discovery. Lost resources (a PSU physically removed) are disabled
+            after 1 day rather than left as permanent NODATA.
+          item_prototypes:
+            - uuid: 1a2b3c4d5e6f708192a3b4c5d6e7f809
+              name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) cumulative energy counter'
+              key: 'supermicro.psu.energy[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
+              type: ZABBIX_ACTIVE
+              value_type: UNSIGNED
+              delay: '{$PSU.ENERGY.POLL.INTERVAL}'
+              description: |
+                Linearized (rollover-corrected) PMBus READ_EIN energy
+                accumulator. Monotonically increasing raw counter - use the
+                paired rate item for a usable Watt-equivalent trend. Units
+                are an opaque accumulator count, not Watt-hours (v1 does not
+                do PMBus scaling/exponent conversion).
+              preprocessing:
+                - type: DISCARD_UNCHANGED_HEARTBEAT
+                  parameters:
+                    - 1h
+              tags:
+                - tag: component
+                  value: psu
+            - uuid: 2b3c4d5e6f708192a3b4c5d6e7f80912
+              name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) energy accumulation rate'
+              key: 'supermicro.psu.energy.rate[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
+              type: DEPENDENT
+              value_type: FLOAT
+              master_item:
+                key: 'supermicro.psu.energy[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
+              description: 'Rate of change of the raw energy counter (units/second), derived via Zabbix change-per-second preprocessing.'
+              preprocessing:
+                - type: CHANGE_PER_SECOND
+                  parameters: []
+              tags:
+                - tag: component
+                  value: psu
+            - uuid: 3c4d5e6f708192a3b4c5d6e7f8091223
+              name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) presence/status'
+              key: 'supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
+              type: ZABBIX_ACTIVE
+              value_type: UNSIGNED
+              delay: '{$PSU.STATUS.POLL.INTERVAL}'
+              description: '1 if the bay answers a PMBus probe, 0 otherwise. Never goes "unsupported" on a routine hot-swap - only on a real config/environment error.'
+              valuemap:
+                name: 'PSU presence'
+              tags:
+                - tag: component
+                  value: psu
+          trigger_prototypes:
+            - uuid: 4d5e6f708192a3b4c5d6e7f809122334
+              name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) read failure on {HOST.NAME}'
+              expression: |
+                nodata(/Supermicro PSU Energy Monitoring/supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}],{$PSU.NODATA.TRIGGER.TIME})
+                or
+                min(/Supermicro PSU Energy Monitoring/supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}],#3)=0
+              priority: WARNING
+              description: 'PSU stopped responding after having been discovered. A short consecutive-poll window absorbs single transient I2C NACKs.'
+            - uuid: 5e6f708192a3b4c5d6e7f80912233445
+              name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) energy counter not increasing on {HOST.NAME}'
+              expression: |
+                max(/Supermicro PSU Energy Monitoring/supermicro.psu.energy.rate[{#PSU.BUS},{#PSU.PMBUS.ADDR}],1h)=0
+                and
+                last(/Supermicro PSU Energy Monitoring/supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}])=1
+              priority: INFO
+              status: DISABLED
+              description: |
+                Disabled by default: a present-but-idle PSU (e.g. a
+                redundant/standby unit) can legitimately show near-zero
+                draw for extended periods. Enable per-host if you know all
+                PSUs on it should always be under active load.
+      valuemaps:
+        - name: 'PSU presence'
+          mappings:
+            - value: '0'
+              newvalue: Absent
+            - value: '1'
+              newvalue: Present
