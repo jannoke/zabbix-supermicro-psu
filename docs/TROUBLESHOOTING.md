@@ -6,6 +6,18 @@
   for a few candidate bus numbers (0-15 is a reasonable sweep range on most
   Supermicro boards) and look for a 7-byte response instead of an
   error/NACK. Once found, set `{$PSU.I2C.BUSES}` on the host to that value.
+- To manually probe all 4 common PSU bay addresses on a known bus at once
+  (without going through `psu_discover.py`), run:
+  ```bash
+  for addr in 0x78 0x7A 0x7C 0x7E; do
+    echo "== $addr =="
+    ipmitool i2c bus=3 $addr 7 0x86
+  done
+  ```
+  (swap `bus=3` for whichever bus number applies to your chassis). A
+  7-byte reply starting with `06` means that bay is populated; an
+  error/NACK means it's empty - the same distinction `psu_discover.py`
+  itself uses.
 - Confirm `ipmitool` is installed and runnable by the user zabbix-agentd
   runs as: `sudo -u zabbix ipmitool i2c bus=3 0x78 7 0x86` (after running
   `packaging/install.sh`, this should work without `sudo -u` needing extra
