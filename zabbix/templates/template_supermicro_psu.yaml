@@ -32,11 +32,11 @@ zabbix_export:
           value: 10m
           description: 'How long a PSU status item may report no data before the read-failure trigger fires.'
       discovery_rules:
-        - uuid: 7c1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a
+        - uuid: 72c98f2847e84c69bba1bba4c3c12592
           name: 'Supermicro PSU bay discovery'
           key: 'supermicro.psu.discovery[{$PSU.I2C.BUSES}]'
           delay: 1h
-          lifetime_type: AFTER
+          lifetime_type: DELETE_AFTER
           lifetime: 1d
           description: |
             Probes every (bus, bay) address combination for a PMBus response.
@@ -44,7 +44,7 @@ zabbix_export:
             discovery. Lost resources (a PSU physically removed) are disabled
             after 1 day rather than left as permanent NODATA.
           item_prototypes:
-            - uuid: 1a2b3c4d5e6f708192a3b4c5d6e7f809
+            - uuid: fb030607fff6437bbf7ee63e181c7fe7
               name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) cumulative energy counter'
               key: 'supermicro.psu.energy[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
               type: ZABBIX_ACTIVE
@@ -63,7 +63,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: psu
-            - uuid: 2b3c4d5e6f708192a3b4c5d6e7f80912
+            - uuid: af189c211d7744efb58a0c8cf35af69f
               name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) energy accumulation rate'
               key: 'supermicro.psu.energy.rate[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
               type: DEPENDENT
@@ -77,7 +77,7 @@ zabbix_export:
               tags:
                 - tag: component
                   value: psu
-            - uuid: 3c4d5e6f708192a3b4c5d6e7f8091223
+            - uuid: 0f823436a7454307b48fec21b684c4cc
               name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) presence/status'
               key: 'supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}]'
               type: ZABBIX_ACTIVE
@@ -90,7 +90,7 @@ zabbix_export:
                 - tag: component
                   value: psu
           trigger_prototypes:
-            - uuid: 4d5e6f708192a3b4c5d6e7f809122334
+            - uuid: 65713da2a6654f22a70462bed171b0cd
               name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) read failure on {HOST.NAME}'
               expression: |
                 nodata(/Supermicro PSU Energy Monitoring/supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}],{$PSU.NODATA.TRIGGER.TIME})
@@ -98,7 +98,7 @@ zabbix_export:
                 min(/Supermicro PSU Energy Monitoring/supermicro.psu.status[{#PSU.BUS},{#PSU.PMBUS.ADDR}],#3)=0
               priority: WARNING
               description: 'PSU stopped responding after having been discovered. A short consecutive-poll window absorbs single transient I2C NACKs.'
-            - uuid: 5e6f708192a3b4c5d6e7f80912233445
+            - uuid: 2b17e086c0a04f41a838497ecf1fbed1
               name: 'PSU {#PSU.BAY} ({#PSU.MODEL}, {#PSU.SERIAL}) energy counter not increasing on {HOST.NAME}'
               expression: |
                 max(/Supermicro PSU Energy Monitoring/supermicro.psu.energy.rate[{#PSU.BUS},{#PSU.PMBUS.ADDR}],1h)=0
@@ -112,7 +112,8 @@ zabbix_export:
                 draw for extended periods. Enable per-host if you know all
                 PSUs on it should always be under active load.
       valuemaps:
-        - name: 'PSU presence'
+        - uuid: 506710a2ce7544aeb3181d7ba783eb98
+          name: 'PSU presence'
           mappings:
             - value: '0'
               newvalue: Absent
