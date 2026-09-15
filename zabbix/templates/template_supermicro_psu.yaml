@@ -1,5 +1,5 @@
 zabbix_export:
-  version: '6.0'
+  version: '7.4'
   templates:
     - uuid: 3f2a1d4e5b6c47a1899d0e6f7a8b9c01
       template: 'Supermicro PSU Energy Monitoring'
